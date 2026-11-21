@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>skill-sync — Cross-Agent Skill Manager</title>
+    <meta
+      name="description"
+      content="Local-first workspace to discover, consolidate, lint, and sync SKILL.md bundles across coding agents."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">S</div>
+          <div>
+            <div class="brand-name">skill-sync</div>
+            <div class="brand-sub" id="store-path-label">~/.skill-sync</div>
+          </div>
+        </div>
+
+        <div class="scope-switch" role="group" aria-label="Skill scope">
+          <button type="button" class="scope-btn active" id="scope-global" data-scope="global">
+            Global
+          </button>
+          <button type="button" class="scope-btn" id="scope-project" data-scope="project">
+            Project
+          </button>
+        </div>
+
+        <nav class="nav-list">
+          <button type="button" class="nav-item active" id="nav-matrix" data-view="matrix">
+            <span>Sync Matrix</span>
+            <span class="nav-count" id="count-skills">0</span>
+          </button>
+          <button type="button" class="nav-item" id="nav-skills" data-view="skills">
+            <span>Skills &amp; Editor</span>
+          </button>
+          <button type="button" class="nav-item" id="nav-conflicts" data-view="conflicts">
+            <span>Diffs &amp; Conflicts</span>
+            <span class="nav-count warn hidden" id="count-conflicts">0</span>
+          </button>
+          <button type="button" class="nav-item" id="nav-doctor" data-view="doctor">
+            <span>Doctor &amp; Git</span>
+            <span class="nav-count danger hidden" id="count-issues">0</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="stat-line">
+            <span>Detected agents</span>
+            <strong id="sidebar-agents">0</strong>
+          </div>
+          <div class="stat-line">
+            <span>Pending changes</span>
+            <strong id="sidebar-pending">0</strong>
+          </div>
+          <div class="stat-line">
+            <span>Git remote</span>
+            <strong id="sidebar-git">None</strong>
+          </div>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title" id="view-title">Sync Matrix</h1>
+            <p class="page-subtitle" id="view-subtitle">
+              Inspect and synchronize SKILL.md bundles across your installed coding agents.
+            </p>
+          </div>
+          <div class="topbar-actions">
+            <button type="button" class="btn btn-secondary" id="btn-refresh">Rescan</button>
+            <button type="button" class="btn btn-secondary" id="btn-new-skill">New Skill</button>
+            <button type="button" class="btn btn-secondary hidden" id="btn-adopt-all">
+              Adopt Unadopted
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-sync-now">Sync Now</button>
+          </div>
+        </header>
+
+        <main class="content">
+          <!-- View 1: Sync Matrix -->
+          <section class="view active" id="view-matrix">
+            <div class="section-header">
+              <h2>Configured &amp; Detected Agents</h2>
+              <span class="muted">Toggle sync, mode, or profile tags per agent.</span>
+            </div>
+            <div class="agent-grid" id="agent-cards"></div>
+
+            <div class="section-header" style="margin-top: 28px">
+              <h2>Agent &times; Skill Matrix</h2>
+              <div class="inline-controls">
+                <input
+                  type="search"
+                  id="matrix-search"
+                  class="input input-sm"
+                  placeholder="Filter skills..."
+                  aria-label="Filter skills"
+                />
+              </div>
+            </div>
+            <div class="table-panel">
+              <table class="matrix-table" id="matrix-table">
+                <thead id="matrix-head"></thead>
+                <tbody id="matrix-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- View 2: Skills & Editor -->
+          <section class="view" id="view-skills">
+            <div class="editor-layout">
+              <div class="skill-list-pane">
+                <div class="pane-toolbar">
+                  <input
+                    type="search"
+                    id="editor-search"
+                    class="input input-sm"
+                    placeholder="Search skills..."
+                    aria-label="Search skills"
+                  />
+                </div>
+                <div class="skill-list" id="editor-skill-list"></div>
+              </div>
+
+              <div class="skill-editor-pane">
+                <div class="editor-header">
+                  <div>
+                    <div class="editor-skill-title" id="editor-title">Select a skill</div>
+                    <div class="editor-skill-meta" id="editor-meta">
+                      Choose a skill on the left to inspect or edit SKILL.md
+                    </div>
+                  </div>
+                  <div class="inline-controls">
+                    <span class="mono-pill" id="editor-tokens">0 tok</span>
+                    <button type="button" class="btn btn-secondary" id="btn-save-skill" disabled>
+                      Save
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn-save-sync-skill" disabled>
+                      Save &amp; Sync
+                    </button>
+                  </div>
+                </div>
+                <div class="editor-files" id="editor-files"></div>
+                <textarea
+                  id="editor-textarea"
+                  class="code-editor"
+                  spellcheck="false"
+                  placeholder="Select a skill to edit its SKILL.md..."
+                  disabled
+                ></textarea>
+                <div class="editor-diagnostics" id="editor-diagnostics"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- View 3: Diffs & Conflicts -->
+          <section class="view" id="view-conflicts">
+            <div class="section-header">
+              <h2>Diverged Copies &amp; Sync Conflicts</h2>
+              <span class="muted">
+                Review exact line diffs before consolidating or pushing across agents.
+              </span>
+            </div>
+            <div id="conflicts-container" class="stack"></div>
+          </section>
+
+          <!-- View 4: Doctor & Git Sync -->
+          <section class="view" id="view-doctor">
+            <div class="two-col">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Skill Doctor</h2>
+                    <p class="muted">YAML frontmatter, resource references, and symlink health.</p>
+                  </div>
+                  <button type="button" class="btn btn-secondary" id="btn-doctor-fix">
+                    Fix Safe Issues
+                  </button>
+                </div>
+                <div id="doctor-issues" class="stack-sm"></div>
+              </div>
+
+              <div class="stack">
+                <div class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h2>Context Token Budgets</h2>
+                      <p class="muted">Passive frontmatter tokens loaded per agent.</p>
+                    </div>
+                  </div>
+                  <div id="token-budget-list" class="stack-sm"></div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h2>Git Multi-Machine Sync</h2>
+                      <p class="muted">Back up and sync your canonical store via a Git repo.</p>
+                    </div>
+                  </div>
+                  <div id="git-status-summary" class="git-meta"></div>
+                  <form id="git-remote-form" class="inline-form">
+                    <input
+                      type="text"
+                      id="git-remote-input"
+                      class="input"
+                      placeholder="git@github.com:you/my-agent-skills.git"
+                      aria-label="Git remote URL"
+                    />
+                    <button type="submit" class="btn btn-secondary" id="btn-git-set-remote">
+                      Set Remote
+                    </button>
+                  </form>
+                  <div class="inline-controls" style="margin-top: 12px">
+                    <button type="button" class="btn btn-primary" id="btn-git-push">
+                      Commit &amp; Push
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="btn-git-pull">
+                      Pull &amp; Sync
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <!-- New Skill Modal -->
+    <dialog id="new-skill-modal" class="modal">
+      <form id="new-skill-form" method="dialog" class="modal-card">
+        <div class="modal-header">
+          <h2>Create New Canonical Skill</h2>
+          <button type="button" class="icon-close" id="btn-close-modal" aria-label="Close">
+            &times;
+          </button>
+        </div>
+        <div class="field">
+          <label for="new-skill-name">Skill Name (kebab-case)</label>
+          <input
+            type="text"
+            id="new-skill-name"
+            class="input mono"
+            placeholder="postgres-query-tuning"
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="new-skill-desc">Description (loaded into agent context)</label>
+          <input
+            type="text"
+            id="new-skill-desc"
+            class="input"
+            placeholder="Analyze EXPLAIN plans and optimize slow PostgreSQL queries."
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="new-skill-tags">Profile Tags (comma-separated, optional)</label>
+          <input
+            type="text"
+            id="new-skill-tags"
+            class="input"
+            placeholder="backend, database, core"
+          />
+        </div>
+        <div class="field">
+          <label for="new-skill-body">Instructions (Markdown)</label>
+          <textarea
+            id="new-skill-body"
+            class="input code-textarea"
+            rows="6"
+            placeholder="# Workflow&#10;&#10;1. Inspect the query plan with EXPLAIN (ANALYZE, BUFFERS)."
+          ></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-create-skill">Create Skill</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

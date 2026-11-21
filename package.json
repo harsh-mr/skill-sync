@@ -1,0 +1,50 @@
+{
+  "name": "skill-sync",
+  "version": "0.1.0",
+  "description": "Local-first CLI & companion Web UI to discover, consolidate, lint, and sync SKILL.md bundles across coding agents.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "skill-sync": "./dist/cli/index.js"
+  },
+  "main": "./dist/core/index.js",
+  "types": "./dist/core/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/cli/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.10.1",
+    "@hono/node-server": "^2.1.10",
+    "chokidar": "^6.0.0",
+    "commander": "^13.1.0",
+    "diff": "^7.0.0",
+    "hono": "^4.13.19",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/diff": "^7.0.2",
+    "@types/node": "^22.15.0",
+    "tsup": "^8.4.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.1.1"
+  }
+}
